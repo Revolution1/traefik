@@ -193,8 +193,10 @@ myApp.controller('mainCtrl', function ($scope, $http) {
           'alert-warning');
       return res;
     }).catch(function (err) {
-      $scope.authenticated = false;
-      $scope.loginModal('show');
+      if (err.status === 401) {
+        $scope.authenticated = false;
+        $scope.loginModal('show');
+      }
     });
   };
 
