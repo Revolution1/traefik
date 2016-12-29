@@ -1,7 +1,7 @@
 {
     "Name": "traefik",
     "Extensions": {
-        "daocloud.2048.navigatorNode": {
+        "daocloud.traefik.navigatorNode": {
             "ExtendedPoint": "dce.navigator.nodeSpecs",
             "Object": {
                 "Title": "Traefik",
@@ -10,7 +10,7 @@
                 "NavigationTargetUID": "daocloud.traefik.globalView"
             }
         },
-        "daocloud.2048.globalView": {
+        "daocloud.traefik.globalView": {
             "ExtendedPoint": "dce.global.views",
             "Object": {
                 "Name": "traefik",
