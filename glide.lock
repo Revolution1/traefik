@@ -1,5 +1,5 @@
-hash: 0801f9e0d663717d9cc81ee3440380d82d22a0af7dc00b078d812bd3e734c7f3
-updated: 2016-12-19T15:05:24.156719846+01:00
+hash: 2ad976843893fc4d823f8025ce2bc67bfdf6a87866e45801a42c86d676826f66
+updated: 2016-12-29T14:19:03.867037804+08:00
 imports:
 - name: github.com/abbot/go-http-auth
   version: cb4372376e1e00e9f6ab9ec142e029302c9e7140
@@ -353,6 +353,10 @@ imports:
   version: ab4b0d7ff424c462da486aef27f354cdeb29a319
   subpackages:
   - src/egoscale
+- name: github.com/rs/cors
+  version: a62a804a8a009876ca59105f7899938a1349f4b3
+- name: github.com/rs/xhandler
+  version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/ryanuber/go-glob
   version: 572520ed46dbddaed19ea3d9541bdd0494163693
 - name: github.com/samuel/go-zookeeper
@@ -450,6 +454,8 @@ imports:
   - bcrypt
   - blowfish
   - ocsp
+- name: golang.org/x/crypto/ocsp
+  version: f6b343c37ca80bfa8ea539da67a0b621f84fab1d
 - name: golang.org/x/net
   version: d4c55e66d8c3a2f3382d264b08e3e3454a66355a
   subpackages:

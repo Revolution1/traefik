@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="myApp">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="./favicon.png?id=12123" />
+  <title>DCE 负载均衡管理工具</title>
+  <!-- Bootstrap core CSS -->
+  <link href="./bootstrap.min.css" rel="stylesheet">
+  <link href="./dashboard.css" rel="stylesheet">
+  <link href="./style.css" rel="stylesheet">
+  <script type="text/javascript">
+    window.DCE_CONTROLLER_URL = '_DCE_CONTROLLER_URL_';
+  </script>
+  <script src="./jquery.min.js"></script>
+  <script src="./bootstrap.min.js"></script>
+  <script src="./angular.min.js"></script>
+  <script src="./lodash.min.js"></script>
+  <script src="./script.js"></script>
+</head>
+
+<body ng-controller="mainCtrl">
+  <nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="#">DCE 负载均衡管理工具</a>
+      </div>
+      <ul class="nav navbar-nav navbar-right" ng-if="authenticated">
+        <li>
+          <!--<a href="{{ traefik.uiUrl }}" class="navbar-link">Traefik 数据面板</a>-->
+          <a href="/dashboard/" class="navbar-link">Traefik 数据面板</a>
+        </li>
+        <li>
+          <p class="navbar-text">DCE 控制器：<a href="{{ baseurl }}" class="navbar-link">{{ baseurl }}</a></p>
+        </li>
+        <li><a ng-click="loginModal('show')" href="#">修改授权</a></li>
+      </ul>
+    </div>
+  </nav>
+  <div class="container-fluid">
+    <div class="not_authenticated col-md-12 text-center" ng-if="!authenticated">
+      <h1 ng-click="loginModal('show')">请授权</h1>
+    </div>
+    <div class="row" ng-if="authenticated">
+      <div class="col-sm-5 col-md-5 sidebar">
+        <!-- Services of App -->
+        <div style="display: inline-block;width: 100%">
+          <h3 class="pull-left">应用:</h3>
+          <a href="#" class="pull-right" style="padding-top: 2em;padding-right: 1em;" ng-click="fetchApps()">refresh</a>
+        </div>
+        <div class="panel-group" role="tablist">
+          <div class="panel panel-default" ng-repeat="app in apps track by app.Name">
+            <div class="panel-heading" role="tab" id="collapseListGroupHeading{{ app.Name }}">
+              <h4 class="panel-title">
+                <a class="sideAppName" data-toggle="collapse" href="#collapseListGroup{{ app.Name }}" aria-expanded="true" aria-controls="collapseListGroup{{ app.Name }}">
+                  {{ app.Name }}
+                </a>
+              </h4>
+            </div>
+            <div id="collapseListGroup{{ app.Name }}" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="collapseListGroupHeading{{ app.Name }}"
+              aria-expanded="true">
+              <ul class="list-group">
+                <li class="list-group-item servs" ng-repeat="serv in app.Services" ng-class="(serv.notSupport || !serv.inTraefikNet) && 'not-support'"
+                  ng-click="(!serv.notSupport && serv.inTraefikNet) && showServiceDetail(serv, app)">
+                  <a href="#">{{ serv.Spec.Name }}</a>
+                  <span class="pull-right">
+                    <span ng-if="serv.notSupport || !serv.inTraefikNet">无法编辑：</span>
+                  <span ng-if="serv.notSupport">服务设置了编辑器不支持的规则&nbsp;</span>
+                  <span ng-if="!serv.inTraefikNet">服务不在 {{ traefik.netName }} 网络中&nbsp;</span>
+                  <span ng-if="serv.exposedPorts && !serv.notSupport && serv.inTraefikNet">参考导出端口: </span>
+                  <span ng-if="serv.exposedPorts && !serv.notSupport && serv.inTraefikNet" ng-repeat="p in serv.exposedPorts">{{ p }}&nbsp;</span>                  &nbsp;
+                  <span ng-if="serv.traefikEnabled">域名: <a href="http://{{ serv.traefikHost }}:{{ serv.lbPort }}" target="_blank">{{ serv.traefikHost }}</a></span>
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-7 col-sm-offset-5 col-md-7 col-md-offset-5 main">
+        <h1 class="page-header service-name-header" ng-if="servDetail"><span>{{ servDetail.appName }}/ </span>{{ servDetail.Spec.Name }}</h1>
+        <h1 class="page-header" ng-if="!servDetail"></h1>
+        <div class="row" ng-repeat="alert in alerts">
+          <div class="alert alert-dismissible fade in" role="alert" ng-class="alert.level">
+            <button ng-attr-id="{{ 'alert-' + alert.id }}" type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+              </button> {{ alert.text }}
+          </div>
+        </div>
+        <div class="row placeholders" ng-if="!servDetail">
+          请从左边选择要编辑的服务
+        </div>
+        <div class="row placeholders" ng-if="servDetail">
+          <div class="col-sm-7 col-sm-offset-2">
+            <div class="form-horizontal">
+              <div class="form-group">
+                <label for="traefik-enable" class="col-sm-3 control-label">启用负载均衡</label>
+                <div class="col-sm-8">
+                  <input type="checkbox" class="form-control no-box-shadow" id="traefik-enable" ng-model="servDetail.traefikEnabled">
+                </div>
+                <div class="col-sm-1 help-icon">
+                  <img src="./help.svg" data-toggle="tooltip" data-placement="right" title="对该服务启用 traefik 负载均衡">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="traefik-host" class="col-sm-3 control-label">Host</label>
+                <div class="col-sm-8">
+                  <input type="text" class="form-control" id="traefik-host" placeholder="设置域名" ng-disabled="!servDetail.traefikEnabled" ng-model="servDetail.traefikHost">
+                </div>
+                <div class="col-sm-1 help-icon">
+                  <img src="./help.svg" data-toggle="tooltip" data-placement="right" title="设置域名, 默认值为 服务名.{{ traefik.domain }}">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="traefik-port" class="col-sm-3 control-label">Port</label>
+                <div class="col-sm-8">
+                  <input type="text" class="form-control" id="traefik-port" placeholder="设置负载均衡使用的端口" ng-disabled="!servDetail.traefikEnabled"
+                    ng-model="servDetail.traefikPort">
+                </div>
+                <div class="col-sm-1 help-icon">
+                  <img src="./help.svg" data-toggle="tooltip" data-placement="right" title="设置负载均衡使用的端口，要使设置生效，此项不可为空">
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="col-sm-offset-3 col-sm-9 text-left">
+                  <button type="submit" class="btn btn-default" ng-click="updateService(servDetail)">提交</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="login-modal" class="modal fade">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">
+              <span aria-hidden="true">&times;</span><span class="sr-only">Close</span>
+              </button>
+            <h4 class="modal-title">使用 DCE 管理员进行授权</h4>
+          </div>
+          <div class="modal-body form-horizontal" ng-keydown="modalKeyDown($event)">
+            <div class="form-group">
+              <label for="auth-dce-url" class="col-sm-3 control-label">DCE 控制器地址</label>
+              <div class="col-sm-8">
+                <input type="text" class="form-control" id="auth-dce-url" placeholder="" ng-model="baseurl">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="auth-username" class="col-sm-3 control-label">用户名</label>
+              <div class="col-sm-8">
+                <input type="text" class="form-control" id="auth-username" placeholder="" ng-model="auth['username']">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="auth-password" class="col-sm-3 control-label">密码</label>
+              <div class="col-sm-8">
+                <input type="text" class="form-control" id="auth-password" placeholder="" ng-model="auth['password']">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="auth_fail pull-left" ng-if="!authenticated">验证失败</span>
+            <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+            <button type="button" class="btn btn-primary" ng-click="modalOnSave(baseurl,auth)">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -17,6 +17,7 @@ import (
 	"github.com/containous/traefik/types"
 	"github.com/containous/traefik/version"
 	"github.com/elazarl/go-bindata-assetfs"
+	"github.com/rs/cors"
 	thoas_stats "github.com/thoas/stats"
 	"github.com/unrolled/render"
 )
@@ -103,9 +104,11 @@ func (provider *WebProvider) Provide(configurationChan chan<- types.ConfigMessag
 
 	// Expose dashboard
 	systemRouter.Methods("GET").Path("/").HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		http.Redirect(response, request, "/dashboard/", 302)
+		http.Redirect(response, request, "/manage/", 302)
 	})
+	systemRouter.Methods("GET").PathPrefix("/plugin.json").Handler(http.FileServer(&assetfs.AssetFS{Asset: autogen.Asset, AssetInfo: autogen.AssetInfo, AssetDir: autogen.AssetDir, Prefix: "manage"}))
 	systemRouter.Methods("GET").PathPrefix("/dashboard/").Handler(http.StripPrefix("/dashboard/", http.FileServer(&assetfs.AssetFS{Asset: autogen.Asset, AssetInfo: autogen.AssetInfo, AssetDir: autogen.AssetDir, Prefix: "static"})))
+	systemRouter.Methods("GET").PathPrefix("/manage/").Handler(http.StripPrefix("/manage/", http.FileServer(&assetfs.AssetFS{Asset: autogen.Asset, AssetInfo: autogen.AssetInfo, AssetDir: autogen.AssetDir, Prefix: "manage"})))
 
 	// expvars
 	if provider.server.globalConfiguration.Debug {
@@ -121,6 +124,11 @@ func (provider *WebProvider) Provide(configurationChan chan<- types.ConfigMessag
 				log.Fatal("Error creating Auth: ", err)
 			}
 			negroni.Use(authMiddleware)
+		}
+		if provider.server.globalConfiguration.Debug {
+			negroni.Use(cors.New(cors.Options{
+				AllowedOrigins: []string{"*"},
+			}))
 		}
 		negroni.UseHandler(systemRouter)
 
